@@ -298,6 +298,9 @@ void ModMenu::open_mods_folder() {
 #elif defined(__APPLE__)
     std::string command = "open \"" + mods_directory.string() + "\"";
     std::system(command.c_str());
+#elif defined(__EMSCRIPTEN__)
+    // A page has no folders to show; mods are off there anyway.
+    (void)mods_directory;
 #else
     static_assert(false, "Not implemented for this platform.");
 #endif

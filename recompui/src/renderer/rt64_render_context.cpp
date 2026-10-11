@@ -227,6 +227,9 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
     appCore.window = window_handle.window;
 #elif defined(__linux__) || defined(__ANDROID__)
     appCore.window = window_handle;
+#elif defined(__EMSCRIPTEN__)
+    // RT64 draws on the page's canvas, the one SDL's window is.
+    appCore.window = "#canvas";
 #elif defined(__APPLE__)
     appCore.window.window = window_handle.window;
     appCore.window.view = window_handle.view;

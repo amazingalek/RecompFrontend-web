@@ -55,6 +55,12 @@ add_compile_definitions(
     __PRFCHWINTRIN_H
 )
 
+if (EMSCRIPTEN)
+    # RmlUi's FreeType is Emscripten's port, in the build of it whose setjmp matches -fwasm-exceptions (legacy wasm
+    # exceptions, Emscripten's default); the plain build's setjmp needs JavaScript exceptions. Build it, and its headers,
+    # once with "embuilder build freetype-legacysjlj".
+    set(FREETYPE_LIBRARY "${EMSCRIPTEN_SYSROOT}/lib/wasm32-emscripten/libfreetype-legacysjlj.a" CACHE FILEPATH "")
+endif()
 add_subdirectory(lib/RmlUi)
 target_compile_definitions(rmlui_core PRIVATE LUNASVG_BUILD_STATIC)
 
@@ -99,6 +105,14 @@ target_include_directories(recompui PUBLIC
     ${CMAKE_BINARY_DIR}/shaders
 )
 
+# With Emscripten, RT64 builds its shaders as WGSL (RT64_WGSL), and so do these: what its build_*_shader functions need
+# to do that, which RT64 sets for its own directory only.
+if (EMSCRIPTEN)
+    set(RT64_WGSL ON)
+    set(RT64_PLUME_WGSL "${RECOMP_FRONTEND_RT64_PATH}/src/contrib/plume/examples/cmake/modules/PlumeWGSL.cmake")
+    target_compile_definitions(recompui PRIVATE RT64_WGSL=1)
+endif()
+
 build_vertex_shader(recompui "shaders/InterfaceVS.hlsl" "shaders/InterfaceVS.hlsl")
 build_pixel_shader(recompui "shaders/InterfacePS.hlsl" "shaders/InterfacePS.hlsl")
 
@@ -108,6 +122,11 @@ if (WIN32)
     target_include_directories(recompui PRIVATE ${sdl2_SOURCE_DIR}/include)
 elseif (APPLE OR CMAKE_SYSTEM_NAME MATCHES "Linux")
     target_include_directories(recompui PRIVATE ${SDL2_INCLUDE_DIRS})
+elseif (EMSCRIPTEN)
+    # Emscripten's ports of SDL2 and FreeType (for RmlUi).
+    target_compile_options(recompui PUBLIC -sUSE_SDL=2 -sUSE_FREETYPE=1)
+    target_link_options(recompui PUBLIC -sUSE_SDL=2 -sUSE_FREETYPE=1)
+    target_include_directories(recompui PRIVATE ${EMSCRIPTEN_SYSROOT}/include/SDL2)
 endif()
 
 target_compile_options(recompui PRIVATE

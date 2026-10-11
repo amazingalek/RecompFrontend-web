@@ -15,6 +15,9 @@ namespace recompui {
         return file_path.extension() == ".so" || file_path.filename().string().find(".so.") != std::string::npos;
 #elif defined(__APPLE__)
         return file_path.extension() == ".dylib";
+#elif defined(__EMSCRIPTEN__)
+        // A page can't load a native library, and mods are off there anyway.
+        return false;
 #else
         static_assert(false, "Unimplemented for this platform.");
 #endif

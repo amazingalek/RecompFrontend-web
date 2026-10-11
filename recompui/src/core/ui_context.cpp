@@ -3,6 +3,11 @@
 #include <unordered_map>
 #include <fstream>
 
+#include <climits>
+#ifdef __EMSCRIPTEN__
+// Emscripten's <limits.h> defines PAGESIZE, the name of one of slot_map's template parameters.
+#undef PAGESIZE
+#endif
 #include "slot_map.h"
 #include "RmlUi/Core/StreamMemory.h"
 #include "RmlUi/../../Source/Core/DocumentHeader.h"

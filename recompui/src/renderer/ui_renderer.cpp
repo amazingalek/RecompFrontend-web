@@ -15,12 +15,19 @@
 
 #include "ui_renderer.h"
 
+#if defined(RT64_WGSL)
+// WebGPU (RT64's WGSL build, always on with Emscripten): the shaders are WGSL only.
+#   include "InterfaceVS.hlsl.wgsl.h"
+#   include "InterfacePS.hlsl.wgsl.h"
+#else
 // TODO: Forced game includes
 #include "InterfaceVS.hlsl.spirv.h"
 // TODO: Forced game includes
 #include "InterfacePS.hlsl.spirv.h"
+#endif
 
-#ifdef _WIN32
+#if defined(RT64_WGSL)
+#elif defined(_WIN32)
 // TODO: Forced game includes
 #   include "InterfaceVS.hlsl.dxil.h"
 // TODO: Forced game includes
@@ -32,7 +39,12 @@
 #   include "InterfacePS.hlsl.metal.h"
 #endif
 
-#ifdef _WIN32
+#if defined(RT64_WGSL)
+#    define GET_SHADER_BLOB(name, format) \
+        ((format) == plume::RenderShaderFormat::WGSL ? name##BlobWGSL : nullptr)
+#    define GET_SHADER_SIZE(name, format) \
+        ((format) == plume::RenderShaderFormat::WGSL ? std::size(name##BlobWGSL) : 0)
+#elif defined(_WIN32)
 #    define GET_SHADER_BLOB(name, format) \
         ((format) == plume::RenderShaderFormat::SPIRV ? name##BlobSPIRV : \
         (format) == plume::RenderShaderFormat::DXIL ? name##BlobDXIL : nullptr)

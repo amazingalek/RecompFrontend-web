@@ -44,6 +44,10 @@ if (WIN32)
     target_include_directories(recompinput PRIVATE ${sdl2_SOURCE_DIR}/include)
 elseif (APPLE OR CMAKE_SYSTEM_NAME MATCHES "Linux")
     target_include_directories(recompinput PRIVATE ${SDL2_INCLUDE_DIRS})
+elseif (EMSCRIPTEN)
+    # Emscripten's port of SDL2.
+    target_compile_options(recompinput PRIVATE -sUSE_SDL=2)
+    target_include_directories(recompinput PRIVATE ${EMSCRIPTEN_SYSROOT}/include/SDL2)
 endif()
 
 target_compile_options(recompinput PRIVATE
