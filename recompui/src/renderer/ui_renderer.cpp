@@ -121,7 +121,13 @@ class RmlRenderInterface_RT64_impl : public Rml::RenderInterfaceCompatibility {
     static constexpr uint32_t initial_index_buffer_size = 1024 * sizeof(int);
     static constexpr plume::RenderFormat RmlTextureFormat = plume::RenderFormat::R8G8B8A8_UNORM;
     static constexpr plume::RenderFormat RmlTextureFormatBgra = plume::RenderFormat::B8G8R8A8_UNORM;
+    // RT64's swap chain format (ShaderLibrary::SwapChainFormat), which the menus draw into: rgba8unorm in a browser,
+    // where Firefox never frees a bgra8unorm canvas's frames.
+#if defined(__EMSCRIPTEN__)
+    static constexpr plume::RenderFormat SwapChainFormat = plume::RenderFormat::R8G8B8A8_UNORM;
+#else
     static constexpr plume::RenderFormat SwapChainFormat = plume::RenderFormat::B8G8R8A8_UNORM;
+#endif
     static constexpr uint32_t RmlTextureFormatBytesPerPixel = RenderFormatSize(RmlTextureFormat);
     static_assert(RenderFormatSize(RmlTextureFormatBgra) == RmlTextureFormatBytesPerPixel);
     plume::RenderInterface* interface_;
