@@ -68,6 +68,67 @@ void recompinput::poll_inputs() {
     }
 }
 
+#ifdef __EMSCRIPTEN__
+#include <chrono>
+#include <string>
+#include <emscripten.h>
+#include <emscripten/threading.h>
+
+// Emscripten's SDL2 has no rumble (SDL_JoystickRumble is unsupported there), so on a page it goes to the browser's
+// Gamepad API, on the main thread where that is: vibrationActuator.playEffect("dual-rumble") on the gamepad behind
+// the joystick, its weak (high frequency) motor as SDL_JoystickRumble's is driven. SDL names a browser gamepad after
+// its id with the spaces tidied, so the gamepad is the k-th whose id reads as the joystick's name, for the k-th
+// joystick of that name in the order SDL saw them connect (instance id).
+EM_JS(void, recompinput_web_rumble, (const char *name_ptr, int rank, int strength), {
+    const tidy = (s) => s.replace(/\s+/g, ' ').trim();
+    const name = tidy(UTF8ToString(name_ptr));
+    for (const pad of navigator.getGamepads ? navigator.getGamepads() : []) {
+        if (!pad || tidy(pad.id) !== name || rank-- > 0) {
+            continue;
+        }
+        const actuator = pad.vibrationActuator;
+        if (actuator && strength > 0) {
+            actuator.playEffect('dual-rumble', { duration: 5000, strongMagnitude: 0, weakMagnitude: strength / 65535 })
+                .catch(() => {});
+        } else if (actuator) {
+            actuator.reset().catch(() => {});
+        }
+        return;
+    }
+});
+
+// Called every retrace for every pad. Only a change of strength goes to the page, and, since a browser ends an effect
+// after 5 seconds at most, a rumble still on once a second.
+static int web_rumble(SDL_Joystick* joystick, uint16_t strength) {
+    struct Played {
+        std::string name; // the page reads it after this returns, so it stays here
+        uint16_t strength = 0;
+        std::chrono::steady_clock::time_point at;
+    };
+    static std::unordered_map<SDL_JoystickID, Played> played;
+    SDL_JoystickID id = SDL_JoystickInstanceID(joystick);
+    auto now = std::chrono::steady_clock::now();
+    auto [it, added] = played.try_emplace(id);
+    Played &p = it->second;
+    if (!added && strength == p.strength && (strength == 0 || now - p.at < std::chrono::seconds(1))) {
+        return 0;
+    }
+    if (added) {
+        const char *name = SDL_JoystickName(joystick);
+        p.name = name ? name : "";
+    }
+    p.strength = strength;
+    p.at = now;
+    int rank = 0;
+    for (int i = 0; i < SDL_NumJoysticks(); i++) {
+        const char *name = SDL_JoystickNameForIndex(i);
+        rank += SDL_JoystickGetDeviceInstanceID(i) < id && p.name == (name ? name : "");
+    }
+    emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VIII, recompinput_web_rumble, p.name.c_str(), rank, int(strength));
+    return 0;
+}
+#endif
+
 void recompinput::set_rumble(int controller_num, bool on) {
     InputState.rumble_active[controller_num] = on;
 }
@@ -88,7 +149,11 @@ void recompinput::update_rumble() {
         if (state.rumble_failed) {
            return;
         }
+#ifdef __EMSCRIPTEN__
+        int err = web_rumble(joystick, rumble_strength);
+#else
         int err = SDL_JoystickRumble(joystick, 0, rumble_strength, duration);
+#endif
         if (err != 0) {
             state.rumble_failed = true;
         }

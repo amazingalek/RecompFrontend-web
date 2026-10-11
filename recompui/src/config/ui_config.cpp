@@ -154,6 +154,8 @@ namespace recompui {
         }
         config_modal->set_selected_tab(0);
         auto header_right = config_modal->get_header()->get_right();
+#ifndef __EMSCRIPTEN__
+        // On a page, ending the program leaves it dead: a reload or closing the tab is the way out there.
         auto quit_button = config_modal->modal_root_context.create_element<IconButton>(header_right, "icons/Quit.svg", ButtonStyle::Basic);
         quit_button->add_pressed_callback([]() {
             if (ultramodern::is_game_started()) {
@@ -162,6 +164,7 @@ namespace recompui {
                 ultramodern::quit();
             }
         });
+#endif
         auto close_button = config_modal->modal_root_context.create_element<IconButton>(header_right, "icons/X.svg", ButtonStyle::Basic);
         close_button->add_pressed_callback([]() {
             config::close();

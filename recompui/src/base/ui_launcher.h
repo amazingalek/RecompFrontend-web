@@ -42,8 +42,11 @@ namespace recompui {
             add_start_game_or_load_rom_option();
             add_setup_controls_option();
             add_settings_option();
+#ifndef __EMSCRIPTEN__
+            // A page has no mods (the live recompiler emits machine code), and a program that ends leaves it dead.
             add_mods_option();
             add_exit_option();
+#endif
         }
 
         std::vector<GameOption *> &get_options() { return options; }

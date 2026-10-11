@@ -1015,7 +1015,10 @@ void recompui::release_image(const std::string &src) {
 }
 
 void recompui::drop_files(const std::list<std::filesystem::path> &file_list) {
-    // Prevent mod installation after the game has started.
+    // Prevent mod installation after the game has started, and on a page, where mods are off.
+#ifdef __EMSCRIPTEN__
+    return;
+#endif
     if (ultramodern::is_game_started()) {
         return;
     }

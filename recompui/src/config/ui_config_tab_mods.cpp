@@ -15,6 +15,10 @@ void config::create_mods_tab(const std::string &name) {
             context.create_element<ModMenu>(parent);
         }
     );
+#ifdef __EMSCRIPTEN__
+    // Mods are off on a page (the live recompiler emits machine code), so the tab is there for its id but not shown.
+    config::set_tab_visible(config::mods::id, false);
+#endif
 
     recompui::update_mod_list(false);
 }
