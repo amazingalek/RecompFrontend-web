@@ -20,6 +20,7 @@ using namespace recompui;
 static RT64::UserConfiguration::Antialiasing device_max_msaa = RT64::UserConfiguration::Antialiasing::None;
 static bool sample_positions_supported = false;
 static bool high_precision_fb_enabled = false;
+static bool render_to_ram = true;
 
 static uint8_t DMEM[0x1000];
 static uint8_t IMEM[0x1000];
@@ -275,6 +276,7 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
 
     // Create the RT64 application.
     app = std::make_unique<RT64::Application>(appCore, appConfig);
+    app->emulatorConfig.framebuffer.renderToRAM = render_to_ram;
 
     // Set initial user config settings based on the current settings.
     auto& cur_config = ultramodern::renderer::get_graphics_config();
@@ -499,6 +501,10 @@ RT64::UserConfiguration::Antialiasing renderer::RT64MaxMSAA() {
 
 std::unique_ptr<ultramodern::renderer::RendererContext> renderer::create_render_context(uint8_t* rdram, ultramodern::renderer::WindowHandle window_handle, ultramodern::renderer::PresentationMode presentation_mode, bool developer_mode) {
     return std::make_unique<renderer::RT64Context>(rdram, window_handle, presentation_mode, developer_mode);
+}
+
+void renderer::set_render_to_ram(bool enabled) {
+    render_to_ram = enabled;
 }
 
 bool renderer::RT64SamplePositionsSupported() {

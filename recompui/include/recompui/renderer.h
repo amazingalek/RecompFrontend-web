@@ -45,6 +45,11 @@ namespace recompui {
 
         std::unique_ptr<ultramodern::renderer::RendererContext> create_render_context(uint8_t *rdram, ultramodern::renderer::WindowHandle window_handle, ultramodern::renderer::PresentationMode presentation_mode, bool developer_mode);
 
+        // Whether RT64 copies each frame it draws back into RDRAM (its render to RAM, on unless turned off), which a game
+        // that reads its own frames on the CPU needs. A render context reads it when it is made. It costs a second draw
+        // of the frame at the N64's resolution, and in a browser a wait of 5-6 ms per display list for the copy.
+        void set_render_to_ram(bool enabled);
+
         RT64::UserConfiguration::Antialiasing RT64MaxMSAA();
         bool RT64SamplePositionsSupported();
         bool RT64HighPrecisionFBEnabled();
