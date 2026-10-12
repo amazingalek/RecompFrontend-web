@@ -1,5 +1,14 @@
 # Recomp Frontend
 
+> [!WARNING]
+> **This is amazingalek/RecompFrontend-web, a fork, not
+> [RecompFrontend](https://github.com/N64Recomp/RecompFrontend).** It makes the menus and input build with Emscripten
+> and draw through WebGPU in a web page, for [recomp-web](https://github.com/amazingalek/recomp-web), and everything
+> in it past upstream's commits was written by AI (Claude). It is not made, endorsed or supported by the N64:
+> Recompiled developers, whose contributing guide bans AI-written code: nothing here is offered upstream, and please
+> don't take issues with this fork to them.
+
+
 RecompFrontend is a library for use with N64: Recompiled projects that provides input handling (recompinput) and a menu API (recompui).
 
 ## recompinput
