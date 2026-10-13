@@ -50,6 +50,10 @@ namespace recompui {
         // of the frame at the N64's resolution, and in a browser a wait of 5-6 ms per display list for the copy.
         void set_render_to_ram(bool enabled);
 
+        // Whether that copy reaches RDRAM a display list late (RT64's renderToRAMLate, off unless turned on), so a list
+        // doesn't wait for it. A game whose CPU reads a frame it has just drawn reads the one before then.
+        void set_render_to_ram_late(bool late);
+
         RT64::UserConfiguration::Antialiasing RT64MaxMSAA();
         bool RT64SamplePositionsSupported();
         bool RT64HighPrecisionFBEnabled();

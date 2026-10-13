@@ -21,6 +21,7 @@ static RT64::UserConfiguration::Antialiasing device_max_msaa = RT64::UserConfigu
 static bool sample_positions_supported = false;
 static bool high_precision_fb_enabled = false;
 static bool render_to_ram = true;
+static bool render_to_ram_late = false;
 
 static uint8_t DMEM[0x1000];
 static uint8_t IMEM[0x1000];
@@ -277,6 +278,7 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
     // Create the RT64 application.
     app = std::make_unique<RT64::Application>(appCore, appConfig);
     app->emulatorConfig.framebuffer.renderToRAM = render_to_ram;
+    app->emulatorConfig.framebuffer.renderToRAMLate = render_to_ram_late;
 
     // Set initial user config settings based on the current settings.
     auto& cur_config = ultramodern::renderer::get_graphics_config();
@@ -505,6 +507,10 @@ std::unique_ptr<ultramodern::renderer::RendererContext> renderer::create_render_
 
 void renderer::set_render_to_ram(bool enabled) {
     render_to_ram = enabled;
+}
+
+void renderer::set_render_to_ram_late(bool late) {
+    render_to_ram_late = late;
 }
 
 bool renderer::RT64SamplePositionsSupported() {
