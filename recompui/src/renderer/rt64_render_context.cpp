@@ -358,6 +358,12 @@ void renderer::RT64Context::send_dummy_workload(uint32_t fb_address) {
     // G_AC_NONE | G_ZS_PIXEL | G_RM_NOOP | G_RM_NOOP2
     app->state->rdp->setOtherMode(0x382C30, 0);
     app->state->rdp->fillRect(0, 0, 320 << 2, 240 << 2);
+#ifdef __EMSCRIPTEN__
+    // Not copied to RDRAM: the dummy framebuffer is game memory once the game starts, and on a page these lists can
+    // fall seconds behind the VIs that queue them (each copy waits for the GPU), so the copies would land on what the
+    // game has loaded there (Donkey Kong 64 keeps its code and audio microcode at 0x80700000).
+    app->state->setRenderToRAM(0);
+#endif
     app->state->fullSync();
     app->state->listProcessEnd();
 }
