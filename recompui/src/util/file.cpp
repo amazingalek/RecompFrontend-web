@@ -22,6 +22,7 @@
 #elif defined(__EMSCRIPTEN__)
 #include <atomic>
 #include <cmath>
+#include <thread>
 #include <emscripten.h>
 #include <emscripten/threading.h>
 #endif
@@ -85,20 +86,39 @@ namespace recompui {
         return paths;
     }
 
+    // The menus ask for a file on the thread that draws them, and a native dialog holds that thread until it closes. On
+    // a page that thread would wait for the picker and then for whatever the callback does with the file: the launcher's
+    // Load ROM copies a ROM into memory, reads, hashes and stores it, several hundred ms for a 64 MB one, in which the
+    // launcher presented nothing. So the picker and the callback run on a thread of their own and the menus draw on (the
+    // callbacks open the UI context they change themselves); a request while a picker is open is ignored.
+    static std::atomic<bool> picking{false};
+
     static void perform_file_dialog_operation(const std::function<void(bool, const std::filesystem::path&)>& callback) {
-        std::list<std::filesystem::path> paths = pick_files(false);
-        callback(!paths.empty(), paths.empty() ? std::filesystem::path{} : paths.front());
-        for (const auto& path : paths) {
-            std::filesystem::remove(path); // a copy in memory, of a file the callback has read or copied by now
+        if (picking.exchange(true)) {
+            return;
         }
+        std::thread([callback]() {
+            std::list<std::filesystem::path> paths = pick_files(false);
+            callback(!paths.empty(), paths.empty() ? std::filesystem::path{} : paths.front());
+            for (const auto& path : paths) {
+                std::filesystem::remove(path); // a copy in memory, of a file the callback has read or copied by now
+            }
+            picking = false;
+        }).detach();
     }
 
     static void perform_file_dialog_operation_multiple(const std::function<void(bool, const std::list<std::filesystem::path>&)>& callback) {
-        std::list<std::filesystem::path> paths = pick_files(true);
-        callback(!paths.empty(), paths);
-        for (const auto& path : paths) {
-            std::filesystem::remove(path);
+        if (picking.exchange(true)) {
+            return;
         }
+        std::thread([callback]() {
+            std::list<std::filesystem::path> paths = pick_files(true);
+            callback(!paths.empty(), paths);
+            for (const auto& path : paths) {
+                std::filesystem::remove(path);
+            }
+            picking = false;
+        }).detach();
     }
 #else
     static void perform_file_dialog_operation(const std::function<void(bool, const std::filesystem::path&)>& callback) {
