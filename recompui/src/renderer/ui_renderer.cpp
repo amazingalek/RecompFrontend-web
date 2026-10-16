@@ -295,6 +295,19 @@ public:
         copy_command_fence_ = device->createCommandFence();
     }
 
+    // Unmaps an upload buffer the CPU wrote the first `written` bytes of. On WebGPU unmap() copies what it is told was
+    // written into the buffer (writeBuffer), all of it if not told: the 1 MB upload buffer at every frame, and the copy
+    // buffer, as large as the largest image yet (94 MB for a 4K launcher's background), at every image the menus load.
+    static void unmap_written(plume::RenderBuffer *buffer, uint64_t written) {
+#ifdef __EMSCRIPTEN__
+        const plume::RenderRange range(0, written);
+        buffer->unmap(0, &range);
+#else
+        (void)written;
+        buffer->unmap();
+#endif
+    }
+
     void reset_dynamic_buffer(DynamicBuffer &dynamic_buffer) {
         assert(dynamic_buffer.mapped_data_ == nullptr);
         dynamic_buffer.bytes_used_ = 0;
@@ -303,14 +316,14 @@ public:
 
     void end_dynamic_buffer(DynamicBuffer &dynamic_buffer) {
         assert(dynamic_buffer.mapped_data_ != nullptr);
-        dynamic_buffer.buffer_->unmap();
+        unmap_written(dynamic_buffer.buffer_.get(), dynamic_buffer.bytes_used_);
         dynamic_buffer.mapped_data_ = nullptr;
     }
 
     void resize_dynamic_buffer(DynamicBuffer &dynamic_buffer, uint32_t new_size, bool map = true) {
         // Unmap the buffer if it's mapped
         if (dynamic_buffer.mapped_data_ != nullptr) {
-            dynamic_buffer.buffer_->unmap();
+            unmap_written(dynamic_buffer.buffer_.get(), dynamic_buffer.bytes_used_);
         }
         
         // If there's already a buffer, move it into the stale buffers so it persists until the start of next frame.
@@ -550,7 +563,7 @@ public:
                 }
             }
 
-            copy_buffer_->unmap();
+            unmap_written(copy_buffer_.get(), uploaded_size_bytes);
 
             // Reset the command list.
             copy_command_list_->begin();
