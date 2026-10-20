@@ -5,6 +5,11 @@
 #include "recompui/config.h"
 #include "ultramodern/ultramodern.hpp"
 
+#ifdef __EMSCRIPTEN__
+#include <atomic>
+#include <emscripten/html5.h>
+#endif
+
 static struct {
     std::list<std::filesystem::path> files_dropped;
 } DropState;
@@ -37,6 +42,62 @@ void purge_deferred_controller_profiles() {
     }
     deferred_controller_profiles.clear();
 }
+
+#ifdef __EMSCRIPTEN__
+// On a page the cursor lock below is the browser's pointer lock, which SDL asks for when relative mode goes on and the
+// browser grants at a click or key. The browser also ends it by itself: at Esc, which then never reaches the page, and
+// when the page loses focus. Emscripten's SDL keeps relative mode on through that, and sends the cursor's position on
+// the canvas as motion from the last locked one, so a game looking with the mouse turned at once by however far that
+// was, and kept turning as the cursor moved; and Esc opened the menu only when pressed a second time. Here motion
+// counts only while the browser holds the lock, and a lock the browser ended while it was wanted opens the menu as Esc
+// does natively. Closing the menu turns relative mode on again, and SDL asks for the lock at once if the player's
+// click or key there still allows it, else at their next one (browsers don't count Esc as one).
+static std::atomic<bool> web_pointer_locked = false;
+static SDL_EventFilter web_next_filter = nullptr;
+static void* web_next_filter_userdata = nullptr;
+
+// Called on the page's thread at once, before the motion SDL's handlers then send on the thread they run on.
+static EM_BOOL web_pointerlock_change(int, const EmscriptenPointerlockChangeEvent* event, void*) {
+    web_pointer_locked = event->isActive;
+    return EM_FALSE;
+}
+
+// Run as SDL pushes an event, before any event watch sees it (a game's own mouse look included).
+static int web_mouse_filter(void*, SDL_Event* event) {
+    if (event->type == SDL_MOUSEMOTION && SDL_GetRelativeMouseMode() && !web_pointer_locked) {
+        return 0;
+    }
+    return web_next_filter != nullptr ? web_next_filter(web_next_filter_userdata, event) : 1;
+}
+
+static void web_watch_pointer_lock() {
+    static bool watching = false;
+    static bool had_lock = false;
+    if (!watching) {
+        watching = true;
+        emscripten_set_pointerlockchange_callback_on_thread(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, EM_FALSE,
+            web_pointerlock_change, EM_CALLBACK_THREAD_CONTEXT_MAIN_RUNTIME_THREAD);
+        // RT64 chains the filter it finds when it installs its own, and this one chains whatever came before it.
+        if (!SDL_GetEventFilter(&web_next_filter, &web_next_filter_userdata)) {
+            web_next_filter = nullptr;
+            web_next_filter_userdata = nullptr;
+        }
+        SDL_SetEventFilter(web_mouse_filter, nullptr);
+    }
+
+    // Relative mode is still on only if the lock ended without this side turning it off (a menu opened another way).
+    bool has_lock = web_pointer_locked;
+    if (had_lock && !has_lock && SDL_GetRelativeMouseMode() && ultramodern::is_game_started()) {
+        SDL_Event escape{};
+        escape.type = SDL_KEYDOWN;
+        escape.key.state = SDL_PRESSED;
+        escape.key.keysym.scancode = SDL_SCANCODE_ESCAPE;
+        escape.key.keysym.sym = SDLK_ESCAPE;
+        recompui::queue_event(escape);
+    }
+    had_lock = has_lock;
+}
+#endif
 
 bool sdl_event_filter(void* userdata, SDL_Event* event) {
     switch (event->type) {
@@ -250,6 +311,9 @@ void handle_events() {
     SDL_Event cur_event;
     static bool started = false;
     static bool exited = false;
+#ifdef __EMSCRIPTEN__
+    web_watch_pointer_lock();
+#endif
     while (SDL_PollEvent(&cur_event) && !exited) {
         exited = sdl_event_filter(nullptr, &cur_event);
 
