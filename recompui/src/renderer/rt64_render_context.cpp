@@ -320,6 +320,10 @@ renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::renderer::Window
         return;
     }
 
+    // RT64 marks where it reads each display list's commands from, so a load from ROM can wait for a list it would land
+    // on (ultramodern's displaylists.cpp; nullptr, so none, without ULTRAMODERN_LOADS_WAIT_FOR_DISPLAY_LISTS).
+    app->state->displayListReads = ultramodern::displaylist_reads();
+
     // Set the application's fullscreen state.
     app->setFullScreen(cur_config.wm_option == ultramodern::renderer::WindowMode::Fullscreen);
 
@@ -349,6 +353,7 @@ void renderer::RT64Context::send_dl(const OSTask* task) {
     app->state->rsp->reset();
     app->interpreter->loadUCodeGBI(task->t.ucode & 0x3FFFFFF, task->t.ucode_data & 0x3FFFFFF, true);
     app->processDisplayLists(app->core.RDRAM, task->t.data_ptr & 0x3FFFFFF, 0, true);
+    ultramodern::displaylist_read();
 }
 
 void renderer::RT64Context::send_dummy_workload(uint32_t fb_address) {
