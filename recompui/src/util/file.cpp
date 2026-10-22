@@ -37,8 +37,17 @@ namespace recompui {
     // page, the page shows a button of its own for it.
     EM_JS(void, recompui_web_pick_files, (int multiple, const char *folder_ptr, int32_t *state_ptr), {
         const folder = UTF8ToString(folder_ptr), state = state_ptr >> 2;
-        const finish = (result) => { Atomics.store(HEAP32, state, result); Atomics.notify(HEAP32, state); };
         const input = document.createElement('input');
+        const finish = (result) => {
+            Module.pickerInputs.delete(input);
+            Atomics.store(HEAP32, state, result);
+            Atomics.notify(HEAP32, state);
+        };
+        // Chrome holds an open picker's input only weakly: one nothing else holds is collected by a GC while the picker
+        // is open, and what is picked then never reaches it (no change, no cancel), so the thread that asked would wait
+        // for good and every later request be ignored. So it is held until it is answered.
+        Module.pickerInputs = Module.pickerInputs || new Set();
+        Module.pickerInputs.add(input);
         input.type = 'file';
         input.multiple = !!multiple;
         input.addEventListener('cancel', () => finish(2));
