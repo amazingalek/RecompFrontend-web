@@ -1,9 +1,9 @@
 # Recomp Frontend
 
 > [!WARNING]
-> **This is amazingalek/RecompFrontend-web, a fork, not
+> **This is n64hub/RecompFrontend-web, a fork, not
 > [RecompFrontend](https://github.com/N64Recomp/RecompFrontend).** It makes the menus and input build with Emscripten
-> and draw through WebGPU in a web page, for [N64Recomp-browser](https://github.com/amazingalek/N64Recomp-browser), and everything
+> and draw through WebGPU in a web page, for [N64Recomp-browser](https://github.com/n64hub/N64Recomp-browser), and everything
 > in it past upstream's commits was written by AI (Claude). It is not made, endorsed or supported by the N64:
 > Recompiled developers, whose contributing guide bans AI-written code: nothing here is offered upstream, and please
 > don't take issues with this fork to them.
